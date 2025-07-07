@@ -1,8 +1,8 @@
-name: "Base PRP Template v2 - Context-Rich with Validation Loops"
+name: "Dynamics & Power Platform Architecture builder"
 description: |
 
 ## Purpose
-Template optimized for AI agents to implement features with sufficient context and self-validation capabilities to achieve working code through iterative refinement.
+To build accurate and highly detailed architectural reference diagrams based on what technologies are being employed at a given enterprise
 
 ## Core Principles
 1. **Context is King**: Include ALL necessary documentation, examples, and caveats
@@ -14,10 +14,10 @@ Template optimized for AI agents to implement features with sufficient context a
 ---
 
 ## Goal
-[What needs to be built - be specific about the end state and desires]
+We want to be able to select from a series of Microsoft technologies from Azure, Dynamics and the Power Platform. 
 
 ## Why
-- [Business value and user impact]
+- In order to reduce the time used to generate these documents. 
 - [Integration with existing features]
 - [Problems this solves and for whom]
 
@@ -70,14 +70,8 @@ Template optimized for AI agents to implement features with sufficient context a
 ### Data models and structure
 
 Create the core data models, we ensure type safety and consistency.
-```python
-Examples: 
- - orm models
- - pydantic models
- - pydantic schemas
- - pydantic validators
 
-```
+
 
 ### list of tasks to be completed to fullfill the PRP in the order they should be completed
 
