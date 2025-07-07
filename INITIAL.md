@@ -1,10 +1,10 @@
 ## FEATURE:
 
-[Insert your feature here]
+a toolset that will prompt the user for what Dynamics and Power Platform tools they're using which will generate an architectural reference for their stack.
 
 ## EXAMPLES:
 
-[Provide and explain examples that you have in the `examples/` folder]
+We have an example of a simple architectural diagram.
 
 ## DOCUMENTATION:
 
