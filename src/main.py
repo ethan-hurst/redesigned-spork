@@ -253,6 +253,80 @@ def download_icons() -> None:
 
 
 @cli.command()
+def cache_stats() -> None:
+    """
+    Show cache statistics and memory usage information.
+    
+    Displays information about diagram cache, icon cache, and current memory usage.
+    """
+    try:
+        console.print("[blue]Cache and Memory Statistics[/blue]")
+        
+        from services.cache_manager import get_cache_manager
+        from utils.memory_optimizer import get_memory_monitor
+        
+        # Get cache statistics
+        cache_manager = get_cache_manager()
+        cache_stats = cache_manager.get_cache_stats()
+        
+        console.print("\n[bold]Cache Statistics:[/bold]")
+        console.print(f"  Memory cache entries: {cache_stats.get('memory_cache_size', 0)}")
+        console.print(f"  Diagram cache files: {cache_stats.get('diagram_cache_files', 0)}")
+        console.print(f"  Icon cache files: {cache_stats.get('icon_cache_files', 0)}")
+        console.print(f"  Metadata cache files: {cache_stats.get('metadata_cache_files', 0)}")
+        
+        # Cache sizes
+        cache_sizes = cache_stats.get('cache_size_bytes', {})
+        total_size_mb = cache_stats.get('total_cache_size_bytes', 0) / 1024 / 1024
+        console.print(f"\n[bold]Cache Sizes:[/bold]")
+        console.print(f"  Diagrams: {cache_sizes.get('diagrams', 0) / 1024 / 1024:.1f} MB")
+        console.print(f"  Icons: {cache_sizes.get('icons', 0) / 1024 / 1024:.1f} MB")
+        console.print(f"  Metadata: {cache_sizes.get('metadata', 0) / 1024 / 1024:.1f} MB")
+        console.print(f"  Total: {total_size_mb:.1f} MB")
+        
+        # Memory usage
+        memory_monitor = get_memory_monitor()
+        memory_info = memory_monitor.get_memory_info()
+        
+        if memory_info:
+            console.print(f"\n[bold]Memory Usage:[/bold]")
+            console.print(f"  Current: {memory_info.get('rss_mb', 0):.1f} MB ({memory_info.get('percent', 0):.1f}%)")
+            console.print(f"  Available: {memory_info.get('available_mb', 0):.1f} MB")
+            console.print(f"  Total: {memory_info.get('total_mb', 0):.1f} MB")
+
+    except Exception as e:
+        console.print(f"[red]Error getting cache/memory statistics: {e}[/red]")
+        logger.exception("Error in cache-stats command")
+        sys.exit(1)
+
+
+@cli.command()
+def clear_cache() -> None:
+    """
+    Clear all caches to free up disk space.
+    
+    This will remove all cached diagrams, icons, and metadata.
+    """
+    try:
+        console.print("[blue]Clearing caches...[/blue]")
+        
+        from services.cache_manager import get_cache_manager
+        
+        cache_manager = get_cache_manager()
+        success = cache_manager.clear_cache("all")
+        
+        if success:
+            console.print("[green]✓[/green] All caches cleared successfully")
+        else:
+            console.print("[red]✗[/red] Failed to clear caches")
+
+    except Exception as e:
+        console.print(f"[red]Error clearing caches: {e}[/red]")
+        logger.exception("Error in clear-cache command")
+        sys.exit(1)
+
+
+@cli.command()
 def create_template() -> None:
     """
     Create a Visio template with Microsoft branding and styling.

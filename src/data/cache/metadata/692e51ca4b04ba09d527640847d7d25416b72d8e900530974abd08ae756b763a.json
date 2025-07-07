@@ -1,0 +1,21 @@
+{
+  "diagram_path": "cache_test.png",
+  "metadata": {
+    "architecture_name": "Generated Architecture",
+    "generated_at": "2025-07-07 06:28:31.497617",
+    "component_count": 4,
+    "integration_count": 1,
+    "layers_included": [
+      "presentation",
+      "data",
+      "integration"
+    ],
+    "format": "png",
+    "complexity_score": 4,
+    "generation_time_seconds": 0.057042,
+    "file_size_bytes": 16848
+  },
+  "cached_at": "2025-07-07T06:28:31.497888",
+  "architecture_name": "Generated Architecture",
+  "format": "png"
+}

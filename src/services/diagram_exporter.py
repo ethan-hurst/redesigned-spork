@@ -8,6 +8,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 
 # Diagram generation imports
@@ -108,6 +110,8 @@ from models.architecture import Architecture, DiagramConfig, DiagramMetadata
 from models.technology import TechnologyCategory
 from services.icon_manager import get_icon_manager
 from services.visio_exporter import get_visio_exporter
+from services.cache_manager import get_cache_manager
+from utils.memory_optimizer import memory_profile, get_memory_monitor, optimize_for_large_architecture
 
 logger = logging.getLogger(__name__)
 
@@ -134,9 +138,11 @@ class DiagramExporter:
         # Component to diagram node mapping
         self.component_mappings = self._initialize_component_mappings()
         
-        # Initialize icon manager and Visio exporter
+        # Initialize services
         self.icon_manager = get_icon_manager()
         self.visio_exporter = get_visio_exporter()
+        self.cache_manager = get_cache_manager()
+        self.memory_monitor = get_memory_monitor()
 
     def _initialize_component_mappings(self) -> dict[str, Any]:
         """
@@ -165,6 +171,7 @@ class DiagramExporter:
             # Default fallback - we'll use Custom for components without specific icons
         }
 
+    @memory_profile("diagram_export")
     def export_diagram(
         self,
         architecture: Architecture,
@@ -172,7 +179,7 @@ class DiagramExporter:
         output_path: Optional[str] = None,
     ) -> tuple[str, DiagramMetadata]:
         """
-        Export an architecture as a visual diagram.
+        Export an architecture as a visual diagram with caching support.
 
         Args:
             architecture: The architecture to export
@@ -186,6 +193,25 @@ class DiagramExporter:
             DiagramExportError: If diagram export fails
         """
         start_time = datetime.now()
+        
+        # Get optimization settings for this architecture size
+        component_count = len(architecture.technology_stack.components)
+        optimization_settings = optimize_for_large_architecture(component_count)
+        
+        # Log memory usage for large architectures
+        if component_count > 20:
+            self.memory_monitor.log_memory_usage(f"Starting export of {component_count} components")
+
+        # Check cache first (only if no custom output path specified)
+        if output_path is None:
+            cached_result = self.cache_manager.get_cached_diagram(architecture, config)
+            if cached_result:
+                cached_path, cached_metadata = cached_result
+                logger.info(f"Using cached diagram: {cached_path}")
+                
+                # Create metadata object from cached data
+                metadata = DiagramMetadata(**cached_metadata)
+                return cached_path, metadata
 
         # Handle Visio export separately
         if config.format.value == "vsdx":
@@ -210,6 +236,11 @@ class DiagramExporter:
 
             # Generate the diagram
             self._generate_diagram_file(architecture, config, final_output_path)
+            
+            # Force garbage collection for large architectures
+            if optimization_settings.get("gc_frequency", 0) > 0:
+                import gc
+                gc.collect()
 
             # Calculate generation time
             generation_time = (datetime.now() - start_time).total_seconds()
@@ -232,6 +263,12 @@ class DiagramExporter:
                 generation_time_seconds=generation_time,
                 file_size_bytes=file_size,
             )
+
+            # Cache the result (only if no custom output path specified)
+            if output_path is None:
+                self.cache_manager.cache_diagram(
+                    architecture, config, final_output_path, metadata.dict()
+                )
 
             logger.info(
                 f"Exported diagram to {final_output_path} in {generation_time:.2f}s"
@@ -540,7 +577,7 @@ class DiagramExporter:
         self, architecture: Architecture, base_config: DiagramConfig, formats: list[str]
     ) -> dict[str, tuple[str, DiagramMetadata]]:
         """
-        Export the same diagram in multiple formats.
+        Export the same diagram in multiple formats using parallel processing.
 
         Args:
             architecture: The architecture to export
@@ -551,10 +588,11 @@ class DiagramExporter:
             Dictionary mapping format to (file_path, metadata) tuples
         """
         results = {}
-
+        
+        # Create configs for all formats first
+        format_configs = []
         for format_str in formats:
             try:
-                # Create config for this format
                 format_config = DiagramConfig(
                     format=format_str,
                     filename=f"{base_config.filename}_{format_str}",
@@ -567,13 +605,69 @@ class DiagramExporter:
                     show_descriptions=base_config.show_descriptions,
                     color_by_category=base_config.color_by_category,
                 )
-
-                file_path, metadata = self.export_diagram(architecture, format_config)
-                results[format_str] = (file_path, metadata)
-
+                format_configs.append((format_str, format_config))
             except Exception as e:
-                logger.error(f"Failed to export format {format_str}: {e}")
+                logger.error(f"Failed to create config for format {format_str}: {e}")
                 continue
+
+        # Export formats in parallel (limit to 4 concurrent exports to avoid overwhelming system)
+        max_workers = min(4, len(format_configs))
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all export tasks
+            future_to_format = {
+                executor.submit(self.export_diagram, architecture, config): format_str
+                for format_str, config in format_configs
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_format):
+                format_str = future_to_format[future]
+                try:
+                    file_path, metadata = future.result()
+                    results[format_str] = (file_path, metadata)
+                    logger.info(f"Completed export for format: {format_str}")
+                except Exception as e:
+                    logger.error(f"Failed to export format {format_str}: {e}")
+                    continue
+
+        return results
+
+    def export_multiple_architectures(
+        self, 
+        architectures_configs: list[tuple[Architecture, DiagramConfig]]
+    ) -> dict[str, tuple[str, DiagramMetadata]]:
+        """
+        Export multiple architectures in parallel.
+
+        Args:
+            architectures_configs: List of (architecture, config) tuples to export
+
+        Returns:
+            Dictionary mapping architecture name to (file_path, metadata) tuples
+        """
+        results = {}
+        
+        # Limit concurrent exports to avoid overwhelming the system
+        max_workers = min(4, len(architectures_configs))
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all export tasks
+            future_to_arch = {
+                executor.submit(self.export_diagram, arch, config): arch.name
+                for arch, config in architectures_configs
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_arch):
+                arch_name = future_to_arch[future]
+                try:
+                    file_path, metadata = future.result()
+                    results[arch_name] = (file_path, metadata)
+                    logger.info(f"Completed export for architecture: {arch_name}")
+                except Exception as e:
+                    logger.error(f"Failed to export architecture {arch_name}: {e}")
+                    continue
 
         return results
 

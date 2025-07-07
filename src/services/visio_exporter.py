@@ -7,7 +7,7 @@ This module provides functionality for generating Visio diagrams from architectu
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 from models.architecture import Architecture, DiagramConfig, DiagramMetadata, DiagramFormat
 from models.technology import TechnologyCategory
@@ -126,6 +126,12 @@ class VisioExporter:
         
         diagram_content = f"""Microsoft Architecture Diagram: {architecture.name}
 Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Description: {architecture.description}
+
+Configuration:
+- Format: {config.format.value.upper()}
+- Show Descriptions: {config.show_descriptions}
+- Use Microsoft Colors: {config.use_microsoft_colors}
 
 Architecture Components:
 """
@@ -143,7 +149,7 @@ Architecture Components:
             
             for component in layer_components:
                 diagram_content += f"  • {component.name}\n"
-                if component.description:
+                if config.show_descriptions and component.description:
                     diagram_content += f"    Description: {component.description}\n"
         
         # Add integration flows

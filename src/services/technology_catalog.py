@@ -17,6 +17,7 @@ from models.technology import (
     TechnologyCategory,
     TechnologyComponent,
 )
+from services.cache_manager import get_cache_manager
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +38,15 @@ class TechnologyCatalog:
 
     def __init__(self, catalog_file: Optional[Path] = None):
         """
-        Initialize the technology catalog.
+        Initialize the technology catalog with lazy loading support.
 
         Args:
             catalog_file: Path to the catalog JSON file. If None, uses default location.
         """
-        self._components: dict[str, TechnologyComponent] = {}
+        self._components: Optional[dict[str, TechnologyComponent]] = None
         self._catalog_file = catalog_file or self._get_default_catalog_path()
-        self._load_catalog()
+        self._cache_manager = get_cache_manager()
+        self._catalog_loaded = False
 
     def _get_default_catalog_path(self) -> Path:
         """
@@ -56,7 +58,28 @@ class TechnologyCatalog:
         current_dir = Path(__file__).parent
         return current_dir.parent / "data" / "technologies.json"
 
-    def _load_catalog(self) -> None:
+    def _ensure_catalog_loaded(self) -> None:
+        """
+        Ensure the catalog is loaded using lazy loading with caching.
+        """
+        if self._catalog_loaded:
+            return
+            
+        # Try to load from cache first
+        cached_catalog = self._cache_manager.get_cached_technology_catalog()
+        if cached_catalog:
+            try:
+                self._parse_catalog_data(cached_catalog)
+                self._catalog_loaded = True
+                logger.debug("Loaded technology catalog from cache")
+                return
+            except Exception as e:
+                logger.debug(f"Failed to load from cache, loading from file: {e}")
+
+        # Load from file
+        self._load_catalog_from_file()
+
+    def _load_catalog_from_file(self) -> None:
         """
         Load the technology catalog from the JSON file.
 
@@ -73,6 +96,10 @@ class TechnologyCatalog:
                 catalog_data = json.load(f)
 
             self._parse_catalog_data(catalog_data)
+            
+            # Cache the loaded data
+            self._cache_manager.cache_technology_catalog(catalog_data)
+            self._catalog_loaded = True
 
             logger.info(
                 f"Loaded {len(self._components)} technology components from catalog"
@@ -93,7 +120,10 @@ class TechnologyCatalog:
         Raises:
             TechnologyCatalogError: If component data is invalid
         """
-        self._components.clear()
+        if self._components is None:
+            self._components = {}
+        else:
+            self._components.clear()
 
         for _category, subcategories in catalog_data.items():
             for _subcategory, components in subcategories.items():
@@ -120,6 +150,7 @@ class TechnologyCatalog:
         Returns:
             List of all technology components
         """
+        self._ensure_catalog_loaded()
         return list(self._components.values())
 
     def get_component_by_id(self, component_id: str) -> Optional[TechnologyComponent]:
@@ -132,6 +163,7 @@ class TechnologyCatalog:
         Returns:
             The component if found, None otherwise
         """
+        self._ensure_catalog_loaded()
         return self._components.get(component_id)
 
     def get_component_ids(self) -> set[str]:
@@ -141,6 +173,7 @@ class TechnologyCatalog:
         Returns:
             Set of all component IDs
         """
+        self._ensure_catalog_loaded()
         return set(self._components.keys())
 
     def get_components_by_category(
@@ -155,6 +188,7 @@ class TechnologyCatalog:
         Returns:
             List of components in the specified category
         """
+        self._ensure_catalog_loaded()
         return [comp for comp in self._components.values() if comp.category == category]
 
     def get_components_by_subcategory(
@@ -170,6 +204,7 @@ class TechnologyCatalog:
         Returns:
             List of components in the specified subcategory
         """
+        self._ensure_catalog_loaded()
         return [
             comp
             for comp in self._components.values()
@@ -186,6 +221,7 @@ class TechnologyCatalog:
         Returns:
             List of components in the specified layer
         """
+        self._ensure_catalog_loaded()
         return [comp for comp in self._components.values() if comp.layer == layer]
 
     def get_core_components(self) -> list[TechnologyComponent]:
@@ -195,6 +231,7 @@ class TechnologyCatalog:
         Returns:
             List of core components
         """
+        self._ensure_catalog_loaded()
         return [comp for comp in self._components.values() if comp.is_core]
 
     def search_components(self, query: str) -> list[TechnologyComponent]:
@@ -207,6 +244,7 @@ class TechnologyCatalog:
         Returns:
             List of components matching the search query
         """
+        self._ensure_catalog_loaded()
         query_lower = query.lower()
         results = []
 
@@ -232,6 +270,7 @@ class TechnologyCatalog:
         Returns:
             List of components supporting the specified pattern
         """
+        self._ensure_catalog_loaded()
         return [
             comp
             for comp in self._components.values()
@@ -353,6 +392,7 @@ class TechnologyCatalog:
         Returns:
             Dictionary with catalog statistics
         """
+        self._ensure_catalog_loaded()
         stats = {
             "total_components": len(self._components),
             "core_components": len(self.get_core_components()),
@@ -378,7 +418,9 @@ class TechnologyCatalog:
 
         This method can be used to refresh the catalog if the file has been updated.
         """
-        self._load_catalog()
+        self._catalog_loaded = False
+        self._cache_manager.clear_cache("metadata")  # Clear cached catalog
+        self._ensure_catalog_loaded()
 
     def export_components_to_dict(self, component_ids: list[str]) -> dict:
         """

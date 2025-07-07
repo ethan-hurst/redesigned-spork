@@ -14,6 +14,8 @@ from urllib.parse import urlparse
 
 import requests
 
+from services.cache_manager import get_cache_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,6 +50,9 @@ class IconManager:
 
         # Ensure directories exist
         self._create_directories()
+        
+        # Initialize cache manager
+        self.cache_manager = get_cache_manager()
 
         # Official Microsoft icon download URLs
         self.icon_sources = {
@@ -56,6 +61,9 @@ class IconManager:
             # This is a placeholder - actual download requires accepting terms
             "azure": "https://learn.microsoft.com/en-us/azure/architecture/icons/",
         }
+        
+        # In-memory cache for icon path lookups
+        self._icon_path_cache: Dict[str, Optional[Path]] = {}
 
     def _create_directories(self) -> None:
         """Create necessary directories for icon storage."""
@@ -72,35 +80,64 @@ class IconManager:
             True if download was successful, False otherwise
         """
         try:
+            # Check if icons already exist
+            if self.is_icons_available():
+                logger.info("Power Platform icons already available")
+                return True
+                
             url = self.icon_sources["power_platform"]
             logger.info(f"Downloading Power Platform icons from {url}")
 
             # Download the zip file
             response = requests.get(url, timeout=30)
             response.raise_for_status()
+            
+            # Validate response content
+            if len(response.content) < 1000:  # Minimum reasonable size for a zip file
+                logger.error("Downloaded file appears to be too small or invalid")
+                return False
 
             # Save and extract the zip file
             zip_path = self.power_platform_icons_path / "power_platform_icons.zip"
             with open(zip_path, "wb") as f:
                 f.write(response.content)
 
-            # Extract the zip file
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(self.power_platform_icons_path)
+            # Validate zip file
+            try:
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    # Test the zip file integrity
+                    bad_file = zip_ref.testzip()
+                    if bad_file:
+                        logger.error(f"Corrupted file in zip: {bad_file}")
+                        return False
+                    
+                    # Extract the zip file
+                    zip_ref.extractall(self.power_platform_icons_path)
+            except zipfile.BadZipFile:
+                logger.error("Downloaded file is not a valid zip file")
+                return False
 
             # Remove the zip file
             zip_path.unlink()
 
+            # Verify icons were extracted
+            if not self.is_icons_available():
+                logger.error("Icons downloaded but not found after extraction")
+                return False
+
             logger.info("Power Platform icons downloaded successfully")
             return True
 
+        except requests.RequestException as e:
+            logger.error(f"Network error downloading Power Platform icons: {e}")
+            return False
         except Exception as e:
             logger.error(f"Failed to download Power Platform icons: {e}")
             return False
 
     def get_component_icon_path(self, component_id: str) -> Optional[Path]:
         """
-        Get the local path to an icon for a specific component.
+        Get the local path to an icon for a specific component with caching.
 
         Args:
             component_id: The ID of the component
@@ -108,22 +145,32 @@ class IconManager:
         Returns:
             Path to the icon file if it exists, None otherwise
         """
-        # Define component ID to icon filename mapping
+        # Check in-memory cache first
+        if component_id in self._icon_path_cache:
+            return self._icon_path_cache[component_id]
+        
+        # Check persistent cache
+        cache_key = f"icon_path_{component_id}"
+        cached_path = self.cache_manager.get_from_memory(cache_key)
+        if cached_path is not None:
+            self._icon_path_cache[component_id] = Path(cached_path) if cached_path else None
+            return self._icon_path_cache[component_id]
+        
+        # Define component ID to icon filename mapping (matching actual downloaded files)
         icon_mappings = {
-            # Power Platform
-            "power_apps_canvas": "Power_Apps.svg",
-            "power_apps_model_driven": "Power_Apps.svg",
-            "power_automate": "Power_Automate.svg",
-            "power_bi": "Power_BI.svg",
-            "power_pages": "Power_Pages.svg",
-            "dataverse": "Dataverse.svg",
-            "ai_builder": "AI_Builder.svg",
-            "copilot_studio": "Microsoft_Copilot_Studio.svg",
-            "power_virtual_agents": "Power_Virtual_Agents.svg",
-            "power_fx": "Power_Fx.svg",
-            # Azure Services (these would need to be mapped to actual Azure icon names)
+            # Power Platform (matching actual downloaded filenames)
+            "power_apps_canvas": "PowerApps_scalable.svg",
+            "power_apps_model_driven": "PowerApps_scalable.svg", 
+            "power_automate": "PowerAutomate_scalable.svg",
+            "power_bi": "PowerBI_scalable.svg",
+            "power_pages": "PowerPages_scalable.svg",
+            "dataverse": "Dataverse_scalable.svg",
+            "ai_builder": "AIBuilder_scalable.svg",
+            "copilot_studio": "CopilotStudio_scalable.svg",
+            "power_fx": "PowerFx_scalable.svg",
+            # Azure Services (placeholders - would need actual Azure icons)
             "azure_functions": "azure-functions.svg",
-            "azure_logic_apps": "azure-logic-apps.svg",
+            "azure_logic_apps": "azure-logic-apps.svg", 
             "azure_service_bus": "azure-service-bus.svg",
             "azure_event_grid": "azure-event-grid.svg",
             "azure_ad": "azure-active-directory.svg",
@@ -132,20 +179,27 @@ class IconManager:
         }
 
         icon_filename = icon_mappings.get(component_id)
-        if not icon_filename:
-            return None
+        icon_path = None
+        
+        if icon_filename:
+            # Check Power Platform icons first
+            power_platform_icon = self.power_platform_icons_path / icon_filename
+            if power_platform_icon.exists():
+                icon_path = power_platform_icon
+            else:
+                # Check Azure icons
+                azure_icon = self.azure_icons_path / icon_filename
+                if azure_icon.exists():
+                    icon_path = azure_icon
 
-        # Check Power Platform icons first
-        power_platform_icon = self.power_platform_icons_path / icon_filename
-        if power_platform_icon.exists():
-            return power_platform_icon
-
-        # Check Azure icons
-        azure_icon = self.azure_icons_path / icon_filename
-        if azure_icon.exists():
-            return azure_icon
-
-        return None
+        # Cache the result (both in memory and persistent cache)
+        self._icon_path_cache[component_id] = icon_path
+        self.cache_manager.cache_in_memory(
+            cache_key, 
+            str(icon_path) if icon_path else None
+        )
+        
+        return icon_path
 
     def get_icon_mappings(self) -> Dict[str, str]:
         """
