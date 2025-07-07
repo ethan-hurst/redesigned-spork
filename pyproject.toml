@@ -30,6 +30,8 @@ dependencies = [
     "diagrams>=0.23.0",
     "pillow>=10.0.0",
     "python-dotenv>=1.0.0",
+    "vsdx>=0.5.19",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]

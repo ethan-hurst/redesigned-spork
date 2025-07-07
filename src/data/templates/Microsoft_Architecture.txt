@@ -1,0 +1,17 @@
+Microsoft Architecture Template: Microsoft Architecture
+====================================================================
+
+This is a template file for creating Microsoft architecture diagrams.
+
+Layer Categories:
+- Power Platform (Purple: #742774)
+- Dynamics 365 (Blue: #0078D4)  
+- Azure Services (Blue: #0078D4)
+- Security & Ops (Red: #D13438)
+
+Instructions:
+1. Use the architecture builder CLI to generate diagrams
+2. Components will be organized by layers automatically
+3. Integration flows will show connections between components
+
+Generated on: 2025-07-07 06:08:39

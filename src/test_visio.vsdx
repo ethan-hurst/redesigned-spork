@@ -1,0 +1,25 @@
+Microsoft Architecture Diagram: Generated Architecture
+Generated on: 2025-07-07 06:08:07
+
+Architecture Components:
+
+Presentation Layer:
+===================
+  • Power Apps (Canvas)
+    Description: Create custom apps with complete control over UI design and user experience
+  • Power BI
+    Description: Create interactive data visualizations and business intelligence reports
+
+Integration Layer:
+==================
+  • Power Automate
+    Description: Automate workflows and business processes with low-code/no-code approach
+
+Data Layer:
+===========
+  • Microsoft Dataverse
+    Description: Secure, cloud-based data storage platform for Power Platform applications
+
+Integration Flows:
+==================
+  Microsoft Dataverse → Power Apps (Canvas) (Dataverse Connector)

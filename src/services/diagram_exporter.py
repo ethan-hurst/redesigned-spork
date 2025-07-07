@@ -106,6 +106,8 @@ Custom = DIAGRAM_CLASSES["Custom"]
 
 from models.architecture import Architecture, DiagramConfig, DiagramMetadata
 from models.technology import TechnologyCategory
+from services.icon_manager import get_icon_manager
+from services.visio_exporter import get_visio_exporter
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +133,10 @@ class DiagramExporter:
 
         # Component to diagram node mapping
         self.component_mappings = self._initialize_component_mappings()
+        
+        # Initialize icon manager and Visio exporter
+        self.icon_manager = get_icon_manager()
+        self.visio_exporter = get_visio_exporter()
 
     def _initialize_component_mappings(self) -> dict[str, Any]:
         """
@@ -180,6 +186,10 @@ class DiagramExporter:
             DiagramExportError: If diagram export fails
         """
         start_time = datetime.now()
+
+        # Handle Visio export separately
+        if config.format.value == "vsdx":
+            return self.visio_exporter.export_visio_diagram(architecture, config, output_path)
 
         if not self.diagrams_available:
             raise DiagramExportError(
@@ -333,6 +343,27 @@ class DiagramExporter:
         Returns:
             Diagram node object
         """
+        # Check if we have a custom Microsoft icon for this component
+        icon_path = self.icon_manager.get_component_icon_path(component.id)
+        
+        if icon_path and icon_path.exists():
+            # Use Custom node with Microsoft icon
+            node_class = self.diagram_classes["Custom"]
+            
+            # Create the node with custom icon
+            label = component.name
+            if config.show_descriptions and component.description:
+                # Truncate description for readability
+                desc = (
+                    component.description[:50] + "..."
+                    if len(component.description) > 50
+                    else component.description
+                )
+                label = f"{component.name}\\n{desc}"
+
+            return node_class(label, icon_path=str(icon_path))
+        
+        # Fall back to built-in diagrams library icons
         # Try to find a specific mapping for this component
         node_class = self.component_mappings.get(component.id)
 
@@ -495,10 +526,15 @@ class DiagramExporter:
         Returns:
             List of supported format strings
         """
-        if not self.diagrams_available:
-            return []
-
-        return ["png", "svg", "pdf", "jpg"]
+        formats = []
+        
+        if self.diagrams_available:
+            formats.extend(["png", "svg", "pdf", "jpg"])
+            
+        if self.visio_exporter.vsdx_available:
+            formats.append("vsdx")
+            
+        return formats
 
     def create_multiple_formats(
         self, architecture: Architecture, base_config: DiagramConfig, formats: list[str]
@@ -540,3 +576,40 @@ class DiagramExporter:
                 continue
 
         return results
+
+    def download_microsoft_icons(self) -> bool:
+        """
+        Download official Microsoft icons for use in diagrams.
+
+        Returns:
+            True if download was successful, False otherwise
+        """
+        try:
+            success = self.icon_manager.download_power_platform_icons()
+            if success:
+                logger.info("Microsoft Power Platform icons downloaded successfully")
+            return success
+        except Exception as e:
+            logger.error(f"Failed to download Microsoft icons: {e}")
+            return False
+
+    def list_available_icons(self) -> dict[str, Any]:
+        """
+        List all available Microsoft icons.
+
+        Returns:
+            Dictionary of available icons by category
+        """
+        return self.icon_manager.list_available_icons()
+
+    def create_visio_template(self, template_name: str = "Microsoft Architecture") -> str:
+        """
+        Create a Visio template with Microsoft branding.
+
+        Args:
+            template_name: Name for the template
+
+        Returns:
+            Path to the created template file
+        """
+        return self.visio_exporter.create_visio_template(template_name)

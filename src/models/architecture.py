@@ -20,6 +20,7 @@ class DiagramFormat(str, Enum):
     SVG = "svg"
     PDF = "pdf"
     JPG = "jpg"
+    VSDX = "vsdx"
 
 
 class DiagramLayout(str, Enum):

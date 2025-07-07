@@ -81,7 +81,7 @@ def interactive() -> None:
     "--format",
     "-f",
     default="png",
-    type=click.Choice(["png", "svg", "pdf", "jpg"]),
+    type=click.Choice(["png", "svg", "pdf", "jpg", "vsdx"]),
     help="Output format (default: png)",
 )
 @click.option(
@@ -216,6 +216,62 @@ def validate() -> None:
     except Exception as e:
         console.print(f"[red]Error during validation: {e}[/red]")
         logger.exception("Error in validate command")
+        sys.exit(1)
+
+
+@cli.command()
+def download_icons() -> None:
+    """
+    Download official Microsoft icons for use in diagrams.
+    
+    This downloads the official Power Platform and Azure icons from Microsoft
+    for use in architectural diagrams.
+    """
+    try:
+        console.print("[blue]Downloading Microsoft icons...[/blue]")
+        
+        cli_commands = CLICommands()
+        success = cli_commands.diagram_exporter.download_microsoft_icons()
+        
+        if success:
+            console.print("[green]✓[/green] Microsoft icons downloaded successfully")
+            
+            # Show available icons
+            available = cli_commands.diagram_exporter.list_available_icons()
+            if available:
+                console.print("\n[bold]Available icon categories:[/bold]")
+                for category, icons in available.items():
+                    console.print(f"  {category}: {len(icons)} icons")
+        else:
+            console.print("[red]✗[/red] Failed to download Microsoft icons")
+            console.print("[yellow]Note: Some icons may require manual download from Microsoft[/yellow]")
+
+    except Exception as e:
+        console.print(f"[red]Error downloading icons: {e}[/red]")
+        logger.exception("Error in download-icons command")
+        sys.exit(1)
+
+
+@cli.command()
+def create_template() -> None:
+    """
+    Create a Visio template with Microsoft branding and styling.
+    
+    This creates a .vsdx template file that can be used as a starting point
+    for creating Microsoft architecture diagrams in Visio.
+    """
+    try:
+        console.print("[blue]Creating Visio template...[/blue]")
+        
+        cli_commands = CLICommands()
+        template_path = cli_commands.diagram_exporter.create_visio_template()
+        
+        console.print(f"[green]✓[/green] Visio template created: {template_path}")
+        console.print("[dim]You can open this template in Microsoft Visio to create custom diagrams[/dim]")
+
+    except Exception as e:
+        console.print(f"[red]Error creating template: {e}[/red]")
+        logger.exception("Error in create-template command")
         sys.exit(1)
 
 
