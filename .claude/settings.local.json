@@ -16,7 +16,13 @@
       "Bash(python:*)",
       "Bash(python -m pytest:*)",
       "Bash(python3 -m pytest:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(sudo apt-get:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(dot:*)",
+      "Bash(pip install:*)",
+      "Bash(mypy:*)",
+      "Bash(dynamics-arch-builder:*)"
     ],
     "deny": []
   }

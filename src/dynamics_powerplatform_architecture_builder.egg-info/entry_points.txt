@@ -1,0 +1,2 @@
+[console_scripts]
+dynamics-arch-builder = src.main:cli
