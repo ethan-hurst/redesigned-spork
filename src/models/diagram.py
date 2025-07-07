@@ -4,12 +4,12 @@ Diagram generation models for Microsoft Dynamics & Power Platform Architecture B
 This module defines models specifically for diagram generation and visualization.
 """
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .architecture import DiagramConfig
-from .technology import (
+from models.architecture import DiagramConfig
+from models.technology import (
     IntegrationFlow,
     LayerType,
     TechnologyCategory,
@@ -33,7 +33,9 @@ class EdgeStyle(BaseModel):
     """Style configuration for diagram edges."""
 
     color: str = Field(default="#000000", description="Edge color")
-    style: str = Field(default="solid", description="Edge style (solid, dashed, dotted)")
+    style: str = Field(
+        default="solid", description="Edge style (solid, dashed, dotted)"
+    )
     width: float = Field(default=1.0, description="Edge width")
     arrow_style: str = Field(default="normal", description="Arrow style")
     label_font_size: int = Field(default=10, description="Label font size")
@@ -42,12 +44,14 @@ class EdgeStyle(BaseModel):
 class DiagramNode(BaseModel):
     """
     Model representing a node in the architectural diagram.
-    
+
     This maps a technology component to its visual representation.
     """
 
     id: str = Field(..., description="Unique node identifier")
-    component: TechnologyComponent = Field(..., description="Associated technology component")
+    component: TechnologyComponent = Field(
+        ..., description="Associated technology component"
+    )
     label: str = Field(..., description="Display label for the node")
     layer: LayerType = Field(..., description="Architectural layer")
 
@@ -59,7 +63,9 @@ class DiagramNode(BaseModel):
     # Visual properties
     style: NodeStyle = Field(default_factory=NodeStyle, description="Node visual style")
     icon_path: Optional[str] = Field(None, description="Path to node icon")
-    show_description: bool = Field(default=False, description="Whether to show component description")
+    show_description: bool = Field(
+        default=False, description="Whether to show component description"
+    )
 
     @property
     def display_text(self) -> str:
@@ -71,15 +77,15 @@ class DiagramNode(BaseModel):
     def get_category_color(self) -> str:
         """
         Get color based on component category.
-        
+
         Returns:
             Hex color code for the component category
         """
         color_map = {
             TechnologyCategory.POWER_PLATFORM: "#742774",  # Power Platform purple
-            TechnologyCategory.DYNAMICS_365: "#0078d4",    # Dynamics blue
+            TechnologyCategory.DYNAMICS_365: "#0078d4",  # Dynamics blue
             TechnologyCategory.AZURE_SERVICES: "#0072c6",  # Azure blue
-            TechnologyCategory.SECURITY_OPS: "#107c10"     # Security green
+            TechnologyCategory.SECURITY_OPS: "#107c10",  # Security green
         }
         return color_map.get(self.component.category, "#737373")  # Default gray
 
@@ -87,7 +93,7 @@ class DiagramNode(BaseModel):
 class DiagramEdge(BaseModel):
     """
     Model representing an edge (connection) in the architectural diagram.
-    
+
     This maps an integration flow to its visual representation.
     """
 
@@ -99,13 +105,15 @@ class DiagramEdge(BaseModel):
 
     # Visual properties
     style: EdgeStyle = Field(default_factory=EdgeStyle, description="Edge visual style")
-    show_pattern_label: bool = Field(default=True, description="Whether to show integration pattern")
+    show_pattern_label: bool = Field(
+        default=True, description="Whether to show integration pattern"
+    )
 
     @property
     def display_label(self) -> str:
         """Get the label to display on the edge."""
         if self.show_pattern_label:
-            pattern_name = self.flow.integration_pattern.value.replace('_', ' ').title()
+            pattern_name = self.flow.integration_pattern.value.replace("_", " ").title()
             return f"{pattern_name}"
         return self.label
 
@@ -113,13 +121,15 @@ class DiagramEdge(BaseModel):
 class LayerGroup(BaseModel):
     """
     Model representing a layer group in the diagram.
-    
+
     This organizes nodes by architectural layer for layout purposes.
     """
 
     layer: LayerType = Field(..., description="Layer type")
     label: str = Field(..., description="Display label for the layer")
-    nodes: List[DiagramNode] = Field(default_factory=list, description="Nodes in this layer")
+    nodes: list[DiagramNode] = Field(
+        default_factory=list, description="Nodes in this layer"
+    )
 
     # Layout properties
     x_position: float = Field(..., description="X position of the layer")
@@ -128,14 +138,18 @@ class LayerGroup(BaseModel):
     height: float = Field(default=100.0, description="Height of the layer")
 
     # Visual properties
-    background_color: str = Field(default="#f8f9fa", description="Layer background color")
+    background_color: str = Field(
+        default="#f8f9fa", description="Layer background color"
+    )
     border_color: str = Field(default="#dee2e6", description="Layer border color")
-    show_background: bool = Field(default=True, description="Whether to show layer background")
+    show_background: bool = Field(
+        default=True, description="Whether to show layer background"
+    )
 
     def add_node(self, node: DiagramNode) -> None:
         """
         Add a node to this layer.
-        
+
         Args:
             node: The node to add
         """
@@ -145,7 +159,7 @@ class LayerGroup(BaseModel):
     def arrange_nodes_vertically(self, spacing: float = 1.0) -> None:
         """
         Arrange nodes vertically within the layer.
-        
+
         Args:
             spacing: Vertical spacing between nodes
         """
@@ -157,14 +171,16 @@ class LayerGroup(BaseModel):
 class DiagramLayout(BaseModel):
     """
     Model representing the complete layout of an architectural diagram.
-    
+
     This coordinates the positioning and organization of all diagram elements.
     """
 
     name: str = Field(..., description="Layout name")
-    layers: List[LayerGroup] = Field(default_factory=list, description="Layer groups")
-    nodes: Dict[str, DiagramNode] = Field(default_factory=dict, description="All nodes by ID")
-    edges: List[DiagramEdge] = Field(default_factory=list, description="All edges")
+    layers: list[LayerGroup] = Field(default_factory=list, description="Layer groups")
+    nodes: dict[str, DiagramNode] = Field(
+        default_factory=dict, description="All nodes by ID"
+    )
+    edges: list[DiagramEdge] = Field(default_factory=list, description="All edges")
 
     # Layout dimensions
     total_width: float = Field(default=1200.0, description="Total diagram width")
@@ -174,7 +190,7 @@ class DiagramLayout(BaseModel):
     def add_layer(self, layer: LayerGroup) -> None:
         """
         Add a layer to the layout.
-        
+
         Args:
             layer: The layer to add
         """
@@ -187,7 +203,7 @@ class DiagramLayout(BaseModel):
     def add_edge(self, edge: DiagramEdge) -> None:
         """
         Add an edge to the layout.
-        
+
         Args:
             edge: The edge to add
         """
@@ -196,14 +212,16 @@ class DiagramLayout(BaseModel):
     def arrange_layers_horizontally(self, spacing: float = 2.0) -> None:
         """
         Arrange layers horizontally across the diagram.
-        
+
         Args:
             spacing: Horizontal spacing between layers
         """
         if not self.layers:
             return
 
-        layer_width = (self.total_width - (2 * self.margin) - ((len(self.layers) - 1) * spacing)) / len(self.layers)
+        layer_width = (
+            self.total_width - (2 * self.margin) - ((len(self.layers) - 1) * spacing)
+        ) / len(self.layers)
 
         for i, layer in enumerate(self.layers):
             layer.x_position = self.margin + (i * (layer_width + spacing))
@@ -217,19 +235,19 @@ class DiagramLayout(BaseModel):
     def get_node_by_id(self, node_id: str) -> Optional[DiagramNode]:
         """
         Get a node by its ID.
-        
+
         Args:
             node_id: The node ID to find
-            
+
         Returns:
             The node if found, None otherwise
         """
         return self.nodes.get(node_id)
 
-    def validate_layout(self) -> List[str]:
+    def validate_layout(self) -> list[str]:
         """
         Validate the layout for consistency.
-        
+
         Returns:
             List of validation errors
         """
@@ -238,13 +256,21 @@ class DiagramLayout(BaseModel):
         # Check that all edge endpoints exist
         for edge in self.edges:
             if edge.source_node_id not in self.nodes:
-                errors.append(f"Edge {edge.id} references missing source node {edge.source_node_id}")
+                errors.append(
+                    f"Edge {edge.id} references missing source node {edge.source_node_id}"
+                )
             if edge.target_node_id not in self.nodes:
-                errors.append(f"Edge {edge.id} references missing target node {edge.target_node_id}")
+                errors.append(
+                    f"Edge {edge.id} references missing target node {edge.target_node_id}"
+                )
 
         # Check for node position overlaps within layers
         for layer in self.layers:
-            positions = [(node.x_position, node.y_position) for node in layer.nodes if node.x_position is not None]
+            positions = [
+                (node.x_position, node.y_position)
+                for node in layer.nodes
+                if node.x_position is not None
+            ]
             if len(positions) != len(set(positions)):
                 errors.append(f"Layer {layer.label} has overlapping node positions")
 
@@ -254,7 +280,7 @@ class DiagramLayout(BaseModel):
 class DiagramGenerator(BaseModel):
     """
     Model for diagram generation configuration and state.
-    
+
     This coordinates the conversion from architecture models to visual diagrams.
     """
 
@@ -262,16 +288,22 @@ class DiagramGenerator(BaseModel):
     layout: Optional[DiagramLayout] = Field(None, description="Current diagram layout")
 
     # Generation state
-    is_generated: bool = Field(default=False, description="Whether diagram has been generated")
-    generation_errors: List[str] = Field(default_factory=list, description="Generation errors")
+    is_generated: bool = Field(
+        default=False, description="Whether diagram has been generated"
+    )
+    generation_errors: list[str] = Field(
+        default_factory=list, description="Generation errors"
+    )
 
-    def create_layout_from_architecture(self, architecture: 'Architecture') -> DiagramLayout:
+    def create_layout_from_architecture(
+        self, architecture: "Architecture"
+    ) -> DiagramLayout:
         """
         Create a diagram layout from an architecture model.
-        
+
         Args:
             architecture: The architecture to create layout for
-            
+
         Returns:
             Generated diagram layout
         """
@@ -283,9 +315,9 @@ class DiagramGenerator(BaseModel):
 
             layer_group = LayerGroup(
                 layer=layer_type,
-                label=layer_type.value.replace('_', ' ').title(),
+                label=layer_type.value.replace("_", " ").title(),
                 x_position=0.0,  # Will be set during arrangement
-                width=200.0      # Will be adjusted during arrangement
+                width=200.0,  # Will be adjusted during arrangement
             )
 
             # Create nodes for each component in the layer
@@ -296,7 +328,7 @@ class DiagramGenerator(BaseModel):
                     label=component.name,
                     layer=layer_type,
                     layer_index=len(layer_group.nodes),
-                    icon_path=component.icon_path
+                    icon_path=component.icon_path,
                 )
 
                 # Apply category-based styling
@@ -317,7 +349,7 @@ class DiagramGenerator(BaseModel):
                 flow=flow,
                 source_node_id=source_node_id,
                 target_node_id=target_node_id,
-                label=flow.name
+                label=flow.name,
             )
 
             layout.add_edge(edge)
@@ -330,10 +362,10 @@ class DiagramGenerator(BaseModel):
         self.layout = layout
         return layout
 
-    def validate_generation_requirements(self) -> List[str]:
+    def validate_generation_requirements(self) -> list[str]:
         """
         Validate that all requirements for diagram generation are met.
-        
+
         Returns:
             List of validation errors
         """

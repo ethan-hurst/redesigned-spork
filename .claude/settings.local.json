@@ -22,7 +22,10 @@
       "Bash(dot:*)",
       "Bash(pip install:*)",
       "Bash(mypy:*)",
-      "Bash(dynamics-arch-builder:*)"
+      "Bash(dynamics-arch-builder:*)",
+      "Bash(apt-get:*)",
+      "Bash(apt-get install:*)",
+      "WebFetch(domain:learn.microsoft.com)"
     ],
     "deny": []
   }

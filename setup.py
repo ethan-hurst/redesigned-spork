@@ -65,8 +65,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "dynamics-arch-builder=src.main:cli",
-            "dynamics-powerplatform-builder=src.main:cli",
+            "dynamics-arch-builder=main:cli",
+            "dynamics-powerplatform-builder=main:cli",
         ],
     },
     keywords="microsoft dynamics power-platform architecture diagrams azure",

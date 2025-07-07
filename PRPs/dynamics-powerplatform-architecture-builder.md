@@ -14,7 +14,7 @@ To build a comprehensive toolset that prompts users for their Microsoft Dynamics
 ---
 
 ## Goal
-Create an interactive toolset that allows users to select from Microsoft Azure, Dynamics 365, and Power Platform technologies to generate comprehensive architectural reference diagrams.
+Create an interactive toolset that allows users to select from Microsoft Azure, Dynamics 365, and Power Platform technologies to generate comprehensive architectural reference diagrams, in both image and visio formats.
 
 ## Why
 - Reduce time spent creating architectural documentation from scratch

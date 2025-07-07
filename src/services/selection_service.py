@@ -6,23 +6,24 @@ This module provides functionality for managing user technology selections and v
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-from ..models.technology import IntegrationFlow, TechnologyComponent, TechnologyStack
-from .technology_catalog import TechnologyCatalog, get_catalog
+from models.technology import IntegrationFlow, TechnologyComponent, TechnologyStack
+from services.technology_catalog import TechnologyCatalog, get_catalog
 
 logger = logging.getLogger(__name__)
 
 
 class SelectionError(Exception):
     """Custom exception for selection operations."""
+
     pass
 
 
 class SelectionService:
     """
     Service class for managing technology component selections.
-    
+
     This class handles the logic for selecting, validating, and organizing
     technology components into a coherent stack.
     """
@@ -30,7 +31,7 @@ class SelectionService:
     def __init__(self, catalog: Optional[TechnologyCatalog] = None):
         """
         Initialize the selection service.
-        
+
         Args:
             catalog: Technology catalog to use. If None, uses the global catalog.
         """
@@ -40,19 +41,16 @@ class SelectionService:
     def create_new_stack(self, name: str, description: str = "") -> TechnologyStack:
         """
         Create a new technology stack.
-        
+
         Args:
             name: Name for the new stack
             description: Optional description
-            
+
         Returns:
             The newly created technology stack
         """
         self.current_stack = TechnologyStack(
-            name=name,
-            description=description,
-            components=[],
-            integration_flows=[]
+            name=name, description=description, components=[], integration_flows=[]
         )
 
         logger.info(f"Created new technology stack: {name}")
@@ -61,20 +59,20 @@ class SelectionService:
     def load_stack(self, stack: TechnologyStack) -> None:
         """
         Load an existing technology stack.
-        
+
         Args:
             stack: The technology stack to load
         """
         self.current_stack = stack
         logger.info(f"Loaded technology stack: {stack.name}")
 
-    def add_component(self, component_id: str) -> Tuple[bool, str]:
+    def add_component(self, component_id: str) -> tuple[bool, str]:
         """
         Add a component to the current stack.
-        
+
         Args:
             component_id: ID of the component to add
-            
+
         Returns:
             Tuple of (success, message)
         """
@@ -88,7 +86,9 @@ class SelectionService:
         try:
             success = self.current_stack.add_component(component)
             if success:
-                logger.info(f"Added component {component.name} to stack {self.current_stack.name}")
+                logger.info(
+                    f"Added component {component.name} to stack {self.current_stack.name}"
+                )
                 return True, f"Added {component.name}"
             else:
                 return False, f"{component.name} is already in the stack"
@@ -96,13 +96,13 @@ class SelectionService:
         except ValueError as e:
             return False, str(e)
 
-    def remove_component(self, component_id: str) -> Tuple[bool, str]:
+    def remove_component(self, component_id: str) -> tuple[bool, str]:
         """
         Remove a component from the current stack.
-        
+
         Args:
             component_id: ID of the component to remove
-            
+
         Returns:
             Tuple of (success, message)
         """
@@ -115,18 +115,22 @@ class SelectionService:
 
         success = self.current_stack.remove_component(component_id)
         if success:
-            logger.info(f"Removed component {component.name} from stack {self.current_stack.name}")
+            logger.info(
+                f"Removed component {component.name} from stack {self.current_stack.name}"
+            )
             return True, f"Removed {component.name}"
         else:
             return False, f"{component.name} was not in the stack"
 
-    def add_multiple_components(self, component_ids: List[str]) -> Tuple[List[str], List[str]]:
+    def add_multiple_components(
+        self, component_ids: list[str]
+    ) -> tuple[list[str], list[str]]:
         """
         Add multiple components to the current stack.
-        
+
         Args:
             component_ids: List of component IDs to add
-            
+
         Returns:
             Tuple of (successfully_added, failed_to_add)
         """
@@ -142,10 +146,10 @@ class SelectionService:
 
         return successful, failed
 
-    def validate_current_stack(self) -> Tuple[bool, List[str]]:
+    def validate_current_stack(self) -> tuple[bool, list[str]]:
         """
         Validate the current technology stack.
-        
+
         Returns:
             Tuple of (is_valid, error_messages)
         """
@@ -165,10 +169,10 @@ class SelectionService:
 
         return len(errors) == 0, errors
 
-    def get_missing_dependencies(self) -> List[TechnologyComponent]:
+    def get_missing_dependencies(self) -> list[TechnologyComponent]:
         """
         Get components that are dependencies but not currently selected.
-        
+
         Returns:
             List of missing dependency components
         """
@@ -187,10 +191,10 @@ class SelectionService:
 
         return missing_deps
 
-    def get_suggestions(self) -> List[TechnologyComponent]:
+    def get_suggestions(self) -> list[TechnologyComponent]:
         """
         Get suggested components based on current selections.
-        
+
         Returns:
             List of suggested components
         """
@@ -200,10 +204,10 @@ class SelectionService:
         selected_ids = [c.id for c in self.current_stack.components]
         return self.catalog.suggest_additional_components(selected_ids)
 
-    def auto_resolve_dependencies(self) -> Tuple[int, List[str]]:
+    def auto_resolve_dependencies(self) -> tuple[int, list[str]]:
         """
         Automatically add missing dependencies to the stack.
-        
+
         Returns:
             Tuple of (number_added, error_messages)
         """
@@ -224,10 +228,10 @@ class SelectionService:
         logger.info(f"Auto-resolved {added_count} dependencies")
         return added_count, errors
 
-    def generate_integration_flows(self) -> List[IntegrationFlow]:
+    def generate_integration_flows(self) -> list[IntegrationFlow]:
         """
         Generate suggested integration flows for the current stack.
-        
+
         Returns:
             List of suggested integration flows
         """
@@ -236,13 +240,13 @@ class SelectionService:
 
         return self.current_stack.get_suggested_integrations()
 
-    def add_integration_flow(self, flow: IntegrationFlow) -> Tuple[bool, str]:
+    def add_integration_flow(self, flow: IntegrationFlow) -> tuple[bool, str]:
         """
         Add an integration flow to the current stack.
-        
+
         Args:
             flow: The integration flow to add
-            
+
         Returns:
             Tuple of (success, message)
         """
@@ -250,8 +254,12 @@ class SelectionService:
             return False, "No active technology stack"
 
         # Validate that source and target components exist in the stack
-        source_component = self.current_stack.get_component_by_id(flow.source_component_id)
-        target_component = self.current_stack.get_component_by_id(flow.target_component_id)
+        source_component = self.current_stack.get_component_by_id(
+            flow.source_component_id
+        )
+        target_component = self.current_stack.get_component_by_id(
+            flow.target_component_id
+        )
 
         if not source_component:
             return False, f"Source component {flow.source_component_id} not in stack"
@@ -261,8 +269,7 @@ class SelectionService:
 
         # Check if flow already exists
         existing_flow = next(
-            (f for f in self.current_stack.integration_flows if f.id == flow.id),
-            None
+            (f for f in self.current_stack.integration_flows if f.id == flow.id), None
         )
 
         if existing_flow:
@@ -272,13 +279,13 @@ class SelectionService:
         logger.info(f"Added integration flow: {flow.name}")
         return True, f"Added integration flow: {flow.name}"
 
-    def remove_integration_flow(self, flow_id: str) -> Tuple[bool, str]:
+    def remove_integration_flow(self, flow_id: str) -> tuple[bool, str]:
         """
         Remove an integration flow from the current stack.
-        
+
         Args:
             flow_id: ID of the flow to remove
-            
+
         Returns:
             Tuple of (success, message)
         """
@@ -296,10 +303,10 @@ class SelectionService:
         else:
             return False, f"Integration flow not found: {flow_id}"
 
-    def get_stack_summary(self) -> Dict:
+    def get_stack_summary(self) -> dict:
         """
         Get a summary of the current technology stack.
-        
+
         Returns:
             Dictionary with stack summary information
         """
@@ -315,7 +322,7 @@ class SelectionService:
             "layers": {},
             "is_valid": False,
             "missing_dependencies": 0,
-            "suggestions_available": 0
+            "suggestions_available": 0,
         }
 
         # Count by category
@@ -342,10 +349,10 @@ class SelectionService:
 
         return summary
 
-    def export_stack_configuration(self) -> Optional[Dict]:
+    def export_stack_configuration(self) -> Optional[dict]:
         """
         Export the current stack configuration as a dictionary.
-        
+
         Returns:
             Dictionary representation of the stack, or None if no stack
         """
@@ -356,8 +363,10 @@ class SelectionService:
             "name": self.current_stack.name,
             "description": self.current_stack.description,
             "components": [c.model_dump() for c in self.current_stack.components],
-            "integration_flows": [f.model_dump() for f in self.current_stack.integration_flows],
-            "exported_at": datetime.now().isoformat()
+            "integration_flows": [
+                f.model_dump() for f in self.current_stack.integration_flows
+            ],
+            "exported_at": datetime.now().isoformat(),
         }
 
     def clear_current_stack(self) -> None:

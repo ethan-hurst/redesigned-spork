@@ -6,22 +6,23 @@ This module defines the command-line interface using click.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 try:
     import click
     from rich.console import Console
+
     CLICK_AVAILABLE = True
 except ImportError:
     CLICK_AVAILABLE = False
     logging.warning("Click library not available. CLI will be disabled.")
 
-from ..models.architecture import DiagramConfig, DiagramFormat
-from ..services.architecture_generator import ArchitectureGenerator
-from ..services.diagram_exporter import DiagramExporter
-from ..services.selection_service import SelectionService
-from ..services.technology_catalog import get_catalog
-from .prompts import InteractivePrompts
+from models.architecture import DiagramConfig, DiagramFormat
+from services.architecture_generator import ArchitectureGenerator
+from services.diagram_exporter import DiagramExporter
+from services.selection_service import SelectionService
+from services.technology_catalog import get_catalog
+from cli.prompts import InteractivePrompts
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -32,16 +33,19 @@ if not CLICK_AVAILABLE:
     def click_command(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def click_option(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     def click_argument(*args, **kwargs):
         def decorator(f):
             return f
+
         return decorator
 
     click_command = click_option = click_argument = lambda *a, **k: lambda f: f
@@ -50,7 +54,7 @@ if not CLICK_AVAILABLE:
 class CLICommands:
     """
     Main CLI commands class for the architecture builder.
-    
+
     This class organizes all the command-line interface functionality.
     """
 
@@ -64,7 +68,7 @@ class CLICommands:
     def run_interactive_mode(self) -> None:
         """
         Run the interactive mode for architecture building.
-        
+
         This is the main interactive workflow that guides users through
         the process of selecting components and generating diagrams.
         """
@@ -99,10 +103,14 @@ class CLICommands:
                     continue
 
                 # Add selected components
-                successful, failed = self.selection_service.add_multiple_components(all_selected_components)
+                successful, failed = self.selection_service.add_multiple_components(
+                    all_selected_components
+                )
 
                 if failed:
-                    console.print(f"[yellow]Some components could not be added: {len(failed)}[/yellow]")
+                    console.print(
+                        f"[yellow]Some components could not be added: {len(failed)}[/yellow]"
+                    )
                     for failure in failed:
                         console.print(f"  • {failure}")
 
@@ -116,16 +124,20 @@ class CLICommands:
                 # Handle conflicts
                 is_valid, errors = self.selection_service.validate_current_stack()
                 if not is_valid:
-                    conflict_errors = [e for e in errors if 'conflicts' in e.lower()]
+                    conflict_errors = [e for e in errors if "conflicts" in e.lower()]
                     if conflict_errors:
-                        continue_anyway = prompts.prompt_handle_conflicts(conflict_errors)
+                        continue_anyway = prompts.prompt_handle_conflicts(
+                            conflict_errors
+                        )
                         if not continue_anyway:
                             continue
 
                 # Add integration flows
                 suggested_flows = self.selection_service.generate_integration_flows()
                 if suggested_flows:
-                    selected_flow_ids = prompts.prompt_integration_flows(suggested_flows)
+                    selected_flow_ids = prompts.prompt_integration_flows(
+                        suggested_flows
+                    )
                     for flow in suggested_flows:
                         if flow.id in selected_flow_ids:
                             self.selection_service.add_integration_flow(flow)
@@ -158,7 +170,7 @@ class CLICommands:
     def _handle_modifications(self, prompts: InteractivePrompts) -> None:
         """
         Handle modification operations in interactive mode.
-        
+
         Args:
             prompts: Interactive prompts instance
         """
@@ -196,7 +208,7 @@ class CLICommands:
     def _generate_diagram_interactive(self, prompts: InteractivePrompts) -> None:
         """
         Generate diagram in interactive mode.
-        
+
         Args:
             prompts: Interactive prompts instance
         """
@@ -205,13 +217,13 @@ class CLICommands:
             config_dict = prompts.prompt_diagram_configuration()
 
             config = DiagramConfig(
-                format=DiagramFormat(config_dict['format']),
-                filename=config_dict['filename'],
-                output_directory=config_dict['output_directory'],
-                width=config_dict['width'],
-                height=config_dict['height'],
-                show_descriptions=config_dict['show_descriptions'],
-                color_by_category=config_dict['color_by_category']
+                format=DiagramFormat(config_dict["format"]),
+                filename=config_dict["filename"],
+                output_directory=config_dict["output_directory"],
+                width=config_dict["width"],
+                height=config_dict["height"],
+                show_descriptions=config_dict["show_descriptions"],
+                color_by_category=config_dict["color_by_category"],
             )
 
             # Generate architecture
@@ -222,7 +234,9 @@ class CLICommands:
 
             # Export diagram
             prompts.display_generation_progress("Creating diagram...")
-            output_path, metadata = self.diagram_exporter.export_diagram(architecture, config)
+            output_path, metadata = self.diagram_exporter.export_diagram(
+                architecture, config
+            )
 
             # Show success
             prompts.display_success_message(output_path, metadata)
@@ -233,15 +247,15 @@ class CLICommands:
 
     def generate_from_components(
         self,
-        component_ids: List[str],
+        component_ids: list[str],
         output_file: str,
         format: str = "png",
         name: str = "Generated Architecture",
-        description: str = ""
+        description: str = "",
     ) -> None:
         """
         Generate diagram from a list of component IDs (non-interactive).
-        
+
         Args:
             component_ids: List of component IDs to include
             output_file: Output file path
@@ -254,21 +268,29 @@ class CLICommands:
             self.selection_service.create_new_stack(name, description)
 
             # Add components
-            successful, failed = self.selection_service.add_multiple_components(component_ids)
+            successful, failed = self.selection_service.add_multiple_components(
+                component_ids
+            )
 
             if failed:
-                console.print(f"[yellow]Warning: {len(failed)} components could not be added[/yellow]")
+                console.print(
+                    f"[yellow]Warning: {len(failed)} components could not be added[/yellow]"
+                )
                 for failure in failed:
                     console.print(f"  • {failure}")
 
             if not successful:
-                console.print("[red]No valid components were added. Cannot generate diagram.[/red]")
+                console.print(
+                    "[red]No valid components were added. Cannot generate diagram.[/red]"
+                )
                 return
 
             # Auto-resolve dependencies
             added_deps, dep_errors = self.selection_service.auto_resolve_dependencies()
             if added_deps > 0:
-                console.print(f"[green]Auto-added {added_deps} dependency components[/green]")
+                console.print(
+                    f"[green]Auto-added {added_deps} dependency components[/green]"
+                )
 
             # Generate integration flows
             suggested_flows = self.selection_service.generate_integration_flows()
@@ -280,7 +302,7 @@ class CLICommands:
             config = DiagramConfig(
                 format=DiagramFormat(format),
                 filename=output_path.stem,
-                output_directory=str(output_path.parent)
+                output_directory=str(output_path.parent),
             )
 
             # Generate architecture and diagram
@@ -290,21 +312,27 @@ class CLICommands:
             )
 
             console.print("[blue]Creating diagram...[/blue]")
-            final_output_path, metadata = self.diagram_exporter.export_diagram(architecture, config)
+            final_output_path, metadata = self.diagram_exporter.export_diagram(
+                architecture, config
+            )
 
             console.print(f"[green]✅ Diagram saved to: {final_output_path}[/green]")
-            console.print(f"[dim]Components: {metadata.component_count}, "
-                         f"Integrations: {metadata.integration_count}, "
-                         f"Complexity: {metadata.complexity_score}/10[/dim]")
+            console.print(
+                f"[dim]Components: {metadata.component_count}, "
+                f"Integrations: {metadata.integration_count}, "
+                f"Complexity: {metadata.complexity_score}/10[/dim]"
+            )
 
         except Exception as e:
             console.print(f"[red]Error generating diagram: {e}[/red]")
             logger.exception("Error in non-interactive generation")
 
-    def list_components(self, category: Optional[str] = None, search: Optional[str] = None) -> None:
+    def list_components(
+        self, category: Optional[str] = None, search: Optional[str] = None
+    ) -> None:
         """
         List available technology components.
-        
+
         Args:
             category: Filter by category
             search: Search term
@@ -314,14 +342,17 @@ class CLICommands:
                 components = self.catalog.search_components(search)
                 console.print(f"[bold]Search results for '{search}':[/bold]")
             elif category:
-                from ..models.technology import TechnologyCategory
+                from models.technology import TechnologyCategory
+
                 try:
                     cat_enum = TechnologyCategory(category.lower())
                     components = self.catalog.get_components_by_category(cat_enum)
                     console.print(f"[bold]Components in category '{category}':[/bold]")
                 except ValueError:
                     console.print(f"[red]Invalid category: {category}[/red]")
-                    console.print(f"Valid categories: {[c.value for c in TechnologyCategory]}")
+                    console.print(
+                        f"Valid categories: {[c.value for c in TechnologyCategory]}"
+                    )
                     return
             else:
                 components = self.catalog.get_all_components()
@@ -340,14 +371,20 @@ class CLICommands:
                 by_category[cat].append(comp)
 
             for category_name, comps in by_category.items():
-                console.print(f"\\n[cyan]{category_name.replace('_', ' ').title()}:[/cyan]")
+                console.print(
+                    f"\\n[cyan]{category_name.replace('_', ' ').title()}:[/cyan]"
+                )
                 for comp in sorted(comps, key=lambda x: x.name):
                     core_marker = " [yellow]*[/yellow]" if comp.is_core else ""
                     console.print(f"  • {comp.name}{core_marker}")
                     console.print(f"    ID: {comp.id}")
                     console.print(f"    Layer: {comp.layer.value}")
                     if comp.description:
-                        desc = comp.description[:80] + "..." if len(comp.description) > 80 else comp.description
+                        desc = (
+                            comp.description[:80] + "..."
+                            if len(comp.description) > 80
+                            else comp.description
+                        )
                         console.print(f"    {desc}")
 
         except Exception as e:
@@ -365,14 +402,20 @@ class CLICommands:
 
             console.print("\\n[bold]By Category:[/bold]")
             for key, value in stats.items():
-                if key.endswith('_components') and not key.startswith('total') and not key.startswith('core'):
-                    category = key.replace('_components', '').replace('_', ' ').title()
+                if (
+                    key.endswith("_components")
+                    and not key.startswith("total")
+                    and not key.startswith("core")
+                ):
+                    category = key.replace("_components", "").replace("_", " ").title()
                     console.print(f"  {category}: {value}")
 
             console.print("\\n[bold]By Layer:[/bold]")
             for key, value in stats.items():
-                if key.endswith('_layer_components'):
-                    layer = key.replace('_layer_components', '').replace('_', ' ').title()
+                if key.endswith("_layer_components"):
+                    layer = (
+                        key.replace("_layer_components", "").replace("_", " ").title()
+                    )
                     console.print(f"  {layer}: {value}")
 
         except Exception as e:

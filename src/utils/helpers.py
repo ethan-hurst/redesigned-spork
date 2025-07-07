@@ -9,7 +9,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 def format_file_size(size_bytes: int) -> str:
     """
     Format file size in human-readable format.
-    
+
     Args:
         size_bytes: Size in bytes
-        
+
     Returns:
         Formatted size string (e.g., "1.5 MB")
     """
@@ -29,6 +29,7 @@ def format_file_size(size_bytes: int) -> str:
 
     size_names = ["B", "KB", "MB", "GB", "TB"]
     import math
+
     i = int(math.floor(math.log(size_bytes, 1024)))
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
@@ -39,10 +40,10 @@ def format_file_size(size_bytes: int) -> str:
 def format_duration(seconds: float) -> str:
     """
     Format duration in human-readable format.
-    
+
     Args:
         seconds: Duration in seconds
-        
+
     Returns:
         Formatted duration string
     """
@@ -63,57 +64,57 @@ def format_duration(seconds: float) -> str:
 def truncate_string(text: str, max_length: int, suffix: str = "...") -> str:
     """
     Truncate a string to a maximum length with optional suffix.
-    
+
     Args:
         text: The text to truncate
         max_length: Maximum length including suffix
         suffix: Suffix to add when truncating
-        
+
     Returns:
         Truncated string
     """
     if not text or len(text) <= max_length:
         return text
 
-    return text[:max_length - len(suffix)] + suffix
+    return text[: max_length - len(suffix)] + suffix
 
 
 def snake_to_title(snake_str: str) -> str:
     """
     Convert snake_case string to Title Case.
-    
+
     Args:
         snake_str: String in snake_case format
-        
+
     Returns:
         String in Title Case
     """
-    return snake_str.replace('_', ' ').title()
+    return snake_str.replace("_", " ").title()
 
 
 def title_to_snake(title_str: str) -> str:
     """
     Convert Title Case string to snake_case.
-    
+
     Args:
         title_str: String in Title Case format
-        
+
     Returns:
         String in snake_case
     """
-    return title_str.replace(' ', '_').lower()
+    return title_str.replace(" ", "_").lower()
 
 
 def ensure_directory_exists(directory_path: Union[str, Path]) -> Path:
     """
     Ensure a directory exists, creating it if necessary.
-    
+
     Args:
         directory_path: Path to the directory
-        
+
     Returns:
         Path object for the directory
-        
+
     Raises:
         OSError: If directory cannot be created
     """
@@ -122,16 +123,16 @@ def ensure_directory_exists(directory_path: Union[str, Path]) -> Path:
     return path
 
 
-def load_json_file(file_path: Union[str, Path]) -> Dict[str, Any]:
+def load_json_file(file_path: Union[str, Path]) -> dict[str, Any]:
     """
     Load JSON data from a file.
-    
+
     Args:
         file_path: Path to the JSON file
-        
+
     Returns:
         Loaded JSON data as dictionary
-        
+
     Raises:
         FileNotFoundError: If file doesn't exist
         json.JSONDecodeError: If file contains invalid JSON
@@ -141,19 +142,21 @@ def load_json_file(file_path: Union[str, Path]) -> Dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"JSON file not found: {path}")
 
-    with open(path, encoding='utf-8') as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_json_file(data: Dict[str, Any], file_path: Union[str, Path], indent: int = 2) -> None:
+def save_json_file(
+    data: dict[str, Any], file_path: Union[str, Path], indent: int = 2
+) -> None:
     """
     Save data to a JSON file.
-    
+
     Args:
         data: Data to save
         file_path: Path where to save the file
         indent: JSON indentation level
-        
+
     Raises:
         OSError: If file cannot be written
     """
@@ -162,17 +165,17 @@ def save_json_file(data: Dict[str, Any], file_path: Union[str, Path], indent: in
     # Ensure parent directory exists
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(path, 'w', encoding='utf-8') as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=indent, ensure_ascii=False)
 
 
-def merge_dictionaries(*dicts: Dict[str, Any]) -> Dict[str, Any]:
+def merge_dictionaries(*dicts: dict[str, Any]) -> dict[str, Any]:
     """
     Merge multiple dictionaries, with later dictionaries taking precedence.
-    
+
     Args:
         *dicts: Dictionaries to merge
-        
+
     Returns:
         Merged dictionary
     """
@@ -183,27 +186,29 @@ def merge_dictionaries(*dicts: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def filter_dict_by_keys(data: Dict[str, Any], allowed_keys: List[str]) -> Dict[str, Any]:
+def filter_dict_by_keys(
+    data: dict[str, Any], allowed_keys: list[str]
+) -> dict[str, Any]:
     """
     Filter dictionary to only include specified keys.
-    
+
     Args:
         data: Dictionary to filter
         allowed_keys: List of keys to keep
-        
+
     Returns:
         Filtered dictionary
     """
     return {k: v for k, v in data.items() if k in allowed_keys}
 
 
-def get_file_info(file_path: Union[str, Path]) -> Dict[str, Any]:
+def get_file_info(file_path: Union[str, Path]) -> dict[str, Any]:
     """
     Get information about a file.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         Dictionary with file information
     """
@@ -224,17 +229,17 @@ def get_file_info(file_path: Union[str, Path]) -> Dict[str, Any]:
         "is_directory": path.is_dir(),
         "extension": path.suffix,
         "name": path.name,
-        "stem": path.stem
+        "stem": path.stem,
     }
 
 
 def create_backup_filename(original_path: Union[str, Path]) -> Path:
     """
     Create a backup filename by adding timestamp.
-    
+
     Args:
         original_path: Original file path
-        
+
     Returns:
         Backup file path
     """
@@ -244,14 +249,16 @@ def create_backup_filename(original_path: Union[str, Path]) -> Path:
     return path.parent / backup_name
 
 
-def list_files_with_extension(directory: Union[str, Path], extension: str) -> List[Path]:
+def list_files_with_extension(
+    directory: Union[str, Path], extension: str
+) -> list[Path]:
     """
     List all files with a specific extension in a directory.
-    
+
     Args:
         directory: Directory to search
         extension: File extension (with or without dot)
-        
+
     Returns:
         List of file paths
     """
@@ -261,21 +268,23 @@ def list_files_with_extension(directory: Union[str, Path], extension: str) -> Li
         return []
 
     # Ensure extension starts with dot
-    if not extension.startswith('.'):
-        extension = f'.{extension}'
+    if not extension.startswith("."):
+        extension = f".{extension}"
 
     return list(path.glob(f"*{extension}"))
 
 
-def clean_temporary_files(directory: Union[str, Path], pattern: str = "temp_*", max_age_hours: int = 24) -> int:
+def clean_temporary_files(
+    directory: Union[str, Path], pattern: str = "temp_*", max_age_hours: int = 24
+) -> int:
     """
     Clean temporary files older than specified age.
-    
+
     Args:
         directory: Directory to clean
         pattern: File pattern to match
         max_age_hours: Maximum age in hours
-        
+
     Returns:
         Number of files cleaned
     """
@@ -302,18 +311,18 @@ def clean_temporary_files(directory: Union[str, Path], pattern: str = "temp_*", 
 def generate_unique_filename(base_path: Union[str, Path], extension: str = "") -> Path:
     """
     Generate a unique filename by adding a counter if file exists.
-    
+
     Args:
         base_path: Base file path
         extension: File extension to add
-        
+
     Returns:
         Unique file path
     """
     path = Path(base_path)
 
-    if extension and not extension.startswith('.'):
-        extension = f'.{extension}'
+    if extension and not extension.startswith("."):
+        extension = f".{extension}"
 
     if extension:
         path = path.with_suffix(extension)
@@ -337,27 +346,24 @@ def generate_unique_filename(base_path: Union[str, Path], extension: str = "") -
 
 
 def validate_and_create_output_path(
-    output_dir: Union[str, Path],
-    filename: str,
-    extension: str,
-    overwrite: bool = False
-) -> Tuple[Path, bool]:
+    output_dir: Union[str, Path], filename: str, extension: str, overwrite: bool = False
+) -> tuple[Path, bool]:
     """
     Validate and create output path, handling conflicts.
-    
+
     Args:
         output_dir: Output directory
         filename: Desired filename
         extension: File extension
         overwrite: Whether to overwrite existing files
-        
+
     Returns:
         Tuple of (final_path, file_existed)
     """
     directory = ensure_directory_exists(output_dir)
 
-    if not extension.startswith('.'):
-        extension = f'.{extension}'
+    if not extension.startswith("."):
+        extension = f".{extension}"
 
     desired_path = directory / f"{filename}{extension}"
     file_existed = desired_path.exists()
@@ -370,10 +376,10 @@ def validate_and_create_output_path(
     return final_path, file_existed
 
 
-def get_system_info() -> Dict[str, Any]:
+def get_system_info() -> dict[str, Any]:
     """
     Get basic system information.
-    
+
     Returns:
         Dictionary with system information
     """
@@ -387,30 +393,35 @@ def get_system_info() -> Dict[str, Any]:
         "processor": platform.processor(),
         "python_version": sys.version,
         "python_executable": sys.executable,
-        "working_directory": str(Path.cwd())
+        "working_directory": str(Path.cwd()),
     }
 
 
 def measure_execution_time(func):
     """
     Decorator to measure function execution time.
-    
+
     Args:
         func: Function to measure
-        
+
     Returns:
         Wrapped function that logs execution time
     """
+
     def wrapper(*args, **kwargs):
         start_time = time.time()
         try:
             result = func(*args, **kwargs)
             execution_time = time.time() - start_time
-            logger.debug(f"{func.__name__} executed in {format_duration(execution_time)}")
+            logger.debug(
+                f"{func.__name__} executed in {format_duration(execution_time)}"
+            )
             return result
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.debug(f"{func.__name__} failed after {format_duration(execution_time)}: {e}")
+            logger.debug(
+                f"{func.__name__} failed after {format_duration(execution_time)}: {e}"
+            )
             raise
 
     return wrapper
@@ -422,7 +433,7 @@ class ProgressTracker:
     def __init__(self, total_steps: int, description: str = "Processing"):
         """
         Initialize progress tracker.
-        
+
         Args:
             total_steps: Total number of steps
             description: Description of the operation
@@ -435,7 +446,7 @@ class ProgressTracker:
     def update(self, step: int = 1, message: str = "") -> None:
         """
         Update progress.
-        
+
         Args:
             step: Number of steps to advance
             message: Optional progress message
@@ -461,7 +472,7 @@ class ProgressTracker:
     def finish(self, message: str = "Complete") -> None:
         """
         Mark progress as finished.
-        
+
         Args:
             message: Completion message
         """
@@ -469,14 +480,14 @@ class ProgressTracker:
         logger.info(f"{self.description}: {message} in {format_duration(elapsed)}")
 
 
-def create_error_report(error: Exception, context: Dict[str, Any]) -> Dict[str, Any]:
+def create_error_report(error: Exception, context: dict[str, Any]) -> dict[str, Any]:
     """
     Create a structured error report.
-    
+
     Args:
         error: The exception that occurred
         context: Additional context information
-        
+
     Returns:
         Error report dictionary
     """
@@ -488,5 +499,5 @@ def create_error_report(error: Exception, context: Dict[str, Any]) -> Dict[str, 
         "traceback": traceback.format_exc(),
         "context": context,
         "timestamp": datetime.now().isoformat(),
-        "system_info": get_system_info()
+        "system_info": get_system_info(),
     }
